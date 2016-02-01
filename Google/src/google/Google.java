@@ -76,20 +76,24 @@ public class Google {
     }
     
     public final static void printResult() {
-        serverRows.stream().map((list) -> {
-            list.stream().forEach((triplet) -> {
+        int totalUnavailable = 0;
+        for(ArrayList<Triplet> list : serverRows) {
+        
+            
+            for(Triplet triplet : list) {
+            
                 if(triplet.getSlots() == -1) {
                     System.out.print("-");
                 } else if(triplet.getSlots() == -2) {
                     System.out.print("Χ");
+                    totalUnavailable++;
                 } else {
-                    System.out.println(triplet.getID());
+                    System.out.print(triplet.getID() + "*");
                 }
-            });
-            return list;
-        }).forEach((_item) -> {
+            }
             System.out.println("");
-        });
+        }
+        System.out.println(totalUnavailable);
     }
     /**
      * @param args the command line arguments
@@ -125,26 +129,65 @@ public class Google {
         for(int i = 0; i < capacityPerRow.size(); i++) {
             capacityPerRow.add(0);
         }
+        boolean assigned = false;
+        int assignedServers = 0;
+        int nextAvailableRow = 0;
         for(Triplet triplet : servers) {
             int slots = triplet.getSlots();
-            for(ArrayList<Triplet> list : serverRows) {
+            int firstInSeq = 0;
+            
+            for(int rowCounter = nextAvailableRow; rowCounter < serverRows.size(); rowCounter++) {
+                ArrayList<Triplet> list = serverRows.get(rowCounter);
                 int slotSeq = 0;
-                int firstInSeq = 0;
-                for(int i = 0; i < list.size(); i++) {
-                    while(slotSeq < slots && list.get(i).getID() == -1) {
+                
+                for(int slotCounter = 0; slotCounter < list.size(); slotCounter++) {
+                    while((slotSeq < slots) && 
+                            (list.get(slotCounter).getID() == -1) && 
+                            ((firstInSeq + slots) <= list.size())) {
                         slotSeq++;
                     }
-                    if(slotSeq == slots) {
-                        for(int j = firstInSeq; j < slots; j++) {
-                            list.set(j, triplet);
+                    if(slotSeq == slots && list.get(slotCounter).getID() != -2) {
+                        for(int auxCounter = firstInSeq; auxCounter < slots + firstInSeq; auxCounter++) {
+                            list.set(auxCounter, triplet);
                         }
+                        assigned = true;
+                        nextAvailableRow = rowCounter + 1;
+                        if(nextAvailableRow == serverRows.size()) {
+                            nextAvailableRow = 0;
+                        }
+                        break;
                     } else {
-                        firstInSeq = i + 1;
+                        firstInSeq = slotCounter + 1;
                         slotSeq = 0;
                     }
+                    slotCounter++;
+                }
+                
+                if(assigned) {
+                    assignedServers++;
+                    assigned = false;
+                    break;
                 }
             }
         }
+        printResult();
+        System.out.println("Optimal capacity: " + avgCapacityPerRow);
+        for(ArrayList<Triplet> list : serverRows) {
+            int rowSummary = 0;
+            for(Triplet triplet : list) {
+                rowSummary += triplet.getCapacity()/triplet.getSlots();
+            }
+            System.out.println("Capaicty: " + rowSummary);
+            
+        }
+        System.out.println("Assigned servers: " + assignedServers);
+        System.out.println("Total servers: " + servers.size());
+        
+        int totalSlots = 0;
+        for(Triplet triplet : servers) {
+            totalSlots += triplet.getSlots();
+        }
+        System.out.println("Slots: " + totalSlots);
     }
     
 }
