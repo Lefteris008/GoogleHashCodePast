@@ -1,7 +1,19 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright (C) 2016   Sofia Agathangelou, Lefteris Paraskevas, 
+                        Panos Petridis, Xenia Zlati
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package google;
 
@@ -11,12 +23,18 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
- * @author Lefteris Paraskevas
+ * @author  Sofia Agathangelou
+ * @author  Lefteris Paraskevas
+ * @author  Panos Petridis
+ * @author  Xenia Zlati
+ * @version 2016.02.02_1234
  */
-public class Google {
+public class ServerDistributor {
     
     private static int numberOfRows;
     private static int slotsPerRow;
@@ -27,6 +45,10 @@ public class Google {
     private static final ArrayList<Pair<Integer, Integer>> unavailableSlots = new ArrayList<>();
     private static final ArrayList<ArrayList<Triplet>> serverRows = new ArrayList();
 
+    /**
+     * Auxiliary method to read the input file.
+     * @param filename A String containing the path to the input file.
+     */
     public static final void readFile(String filename) {
         try(BufferedReader br = new BufferedReader(new FileReader(filename))) {
             String[] temp;
@@ -52,11 +74,10 @@ public class Google {
                 }
                 index++;
             }
-            // line is not visible here.
         } catch (FileNotFoundException e) {
-
+            Logger.getLogger(ServerDistributor.class.getName()).log(Level.SEVERE, null, e);
         } catch (IOException e) {
-            
+            Logger.getLogger(ServerDistributor.class.getName()).log(Level.SEVERE, null, e);
         }
     }
     
@@ -75,13 +96,14 @@ public class Google {
         });
     }
     
+    /**
+     * Method to print all retrieved data from the input file, along with
+     * the proposed distribution of servers.
+     */
     public final static void printResult() {
         int totalUnavailable = 0;
         for(ArrayList<Triplet> list : serverRows) {
-        
-            
             for(Triplet triplet : list) {
-            
                 if(triplet.getSlots() == -1) {
                     System.out.print("-");
                 } else if(triplet.getSlots() == -2) {
@@ -91,18 +113,18 @@ public class Google {
                     System.out.print(triplet.getID() + "*");
                 }
             }
-            System.out.println("");
+            System.out.println();
         }
         System.out.println(totalUnavailable);
     }
+    
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        String path = "C:\\Users\\Lefteris\\Downloads\\dc.in";
-        readFile(path);
-        //print();
-        
+        //String path = "C:\\Users\\Lefteris\\Downloads\\dc.in";
+        String path = args[0];
+        readFile(path); //Read the input file
         
         for(int i = 0; i <numberOfRows; i++) {
             ArrayList<Triplet> tempList = new ArrayList<>();
@@ -113,13 +135,12 @@ public class Google {
             }
             serverRows.add(tempList);
         }
-        for(Pair<Integer, Integer> uvSlot : unavailableSlots)
-        {
+        unavailableSlots.stream().forEach((uvSlot) -> {
             ArrayList<Triplet> tempList = new ArrayList<>(
                     serverRows.get(uvSlot.getE()));
             tempList.set(uvSlot.getV(), new Triplet(-2, -2, -2)); //-2 unavailable slot
             serverRows.set(uvSlot.getE(), tempList);
-        }
+        });
         int totalCapacity = 0;
         totalCapacity = servers.stream().map((triplet) -> triplet.getCapacity()).reduce(totalCapacity, Integer::sum);
         double avgCapacityPerRow = totalCapacity / numberOfRows;
@@ -135,11 +156,9 @@ public class Google {
         for(Triplet triplet : servers) {
             int slots = triplet.getSlots();
             int firstInSeq = 0;
-            
             for(int rowCounter = nextAvailableRow; rowCounter < serverRows.size(); rowCounter++) {
                 ArrayList<Triplet> list = serverRows.get(rowCounter);
                 int slotSeq = 0;
-                
                 for(int slotCounter = 0; slotCounter < list.size(); slotCounter++) {
                     while((slotSeq < slots) && 
                             (list.get(slotCounter).getID() == -1) && 
@@ -147,7 +166,8 @@ public class Google {
                         slotSeq++;
                     }
                     if(slotSeq == slots && list.get(slotCounter).getID() != -2) {
-                        for(int auxCounter = firstInSeq; auxCounter < slots + firstInSeq; auxCounter++) {
+                        for(int auxCounter = firstInSeq; 
+                                auxCounter < (slots + firstInSeq); auxCounter++) {
                             list.set(auxCounter, triplet);
                         }
                         assigned = true;
@@ -162,8 +182,7 @@ public class Google {
                     }
                     slotCounter++;
                 }
-                
-                if(assigned) {
+                if(assigned) { //If the resource is assigned
                     assignedServers++;
                     assigned = false;
                     break;
@@ -172,21 +191,21 @@ public class Google {
         }
         printResult();
         System.out.println("Optimal capacity: " + avgCapacityPerRow);
-        for(ArrayList<Triplet> list : serverRows) {
+        serverRows.stream().map((list) -> {
             int rowSummary = 0;
-            for(Triplet triplet : list) {
-                rowSummary += triplet.getCapacity()/triplet.getSlots();
-            }
+            rowSummary = list.stream().map((triplet) -> 
+                    triplet.getCapacity() / triplet.getSlots())
+                    .reduce(rowSummary, Integer::sum);
+            return rowSummary;
+        }).forEach((rowSummary) -> {
             System.out.println("Capaicty: " + rowSummary);
-            
-        }
+        });
         System.out.println("Assigned servers: " + assignedServers);
         System.out.println("Total servers: " + servers.size());
         
         int totalSlots = 0;
-        for(Triplet triplet : servers) {
-            totalSlots += triplet.getSlots();
-        }
+        totalSlots = servers.stream().map((triplet) -> triplet.getSlots())
+                .reduce(totalSlots, Integer::sum);
         System.out.println("Slots: " + totalSlots);
     }
     
